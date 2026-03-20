@@ -1,3 +1,10 @@
 .DS_Store
 PPMS-UIComponents-ExampleApp
 PPMS-UIComponents
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
