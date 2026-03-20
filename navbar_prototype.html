@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piwik PRO</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#0073E6;--blue-dark:#005bb8;--blue-light:#EBF4FF;
+  --green:#1F9254;--green-dark:#177A46;
+  --bg:#fff;--bg-light:#F8F9FA;--bg-hover:#F0F4F8;
+  --border:#E0E0E0;--text:#1A1A1A;--text-muted:#757575;
+  --sidebar-w:44px;--sidebar-exp:200px;--topbar-h:52px;--moduelnav-h:50px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;color:var(--text);background:var(--bg);overflow:hidden;height:100vh}
+.app{display:flex;flex-direction:column;height:100vh}
+
+/* TOP BAR */
+.top-bar{height:var(--topbar-h);display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 12px;border-bottom:1px solid var(--border);background:white;flex-shrink:0;z-index:10}
+.logo{display:flex;align-items:center;gap:3px;font-weight:800;font-size:17px;letter-spacing:0.5px;color:#1a1a1a;text-transform:uppercase}
+.logo .pro{background:#1a1a1a;color:white;font-size:10px;font-weight:700;padding:2px 4px;border-radius:2px;margin-left:1px}
+.header-right{display:flex;align-items:center;gap:16px}
+.upgrade-link{color:var(--blue);font-weight:500;text-decoration:none;cursor:pointer;font-size:14px}
+.site-selector{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border);border-radius:4px;cursor:pointer;position:relative;min-width:160px;background:white;user-select:none}
+.site-selector:hover{background:var(--bg-light)}
+.site-label{flex:1;font-size:13px}
+.site-dropdown{display:none;position:absolute;top:calc(100% + 4px);right:0;background:white;border:1px solid var(--border);border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.12);min-width:200px;z-index:2000}
+.site-dropdown.open{display:block}
+.site-opt{padding:10px 16px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px}
+.site-opt:hover{background:var(--bg-light)}
+.site-opt.active{color:var(--blue);font-weight:500}
+
+/* APP BODY */
+.app-body{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* SIDEBAR WRAPPER – always 44px in layout */
+#sw{width:var(--sidebar-w);flex-shrink:0;position:relative}
+
+/* SIDEBAR INNER – absolute so can expand to 200px overlay */
+#sidebar{position:absolute;left:0;top:0;bottom:0;width:var(--sidebar-w);background:white;border-right:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;transition:width .2s ease,box-shadow .2s ease;z-index:200}
+#sidebar.exp{width:var(--sidebar-exp);box-shadow:4px 0 16px rgba(0,0,0,.12)}
+
+/* SIDEBAR OVERLAY */
+#sovl{display:none;position:fixed;inset:0;z-index:190;background:rgba(0,0,0,.05)}
+#sovl.on{display:block}
+
+/* SIDEBAR ITEMS */
+.si{display:flex;align-items:center;gap:0;padding:0;cursor:pointer;text-decoration:none;color:var(--text);position:relative;white-space:nowrap;border:none;background:none;width:100%}
+.si:hover{background:var(--bg-hover)}
+.si.active{background:var(--blue-light);color:var(--blue)}
+.si.active .si-icon{color:var(--blue)}
+.si-icon{width:var(--sidebar-w);height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#555;transition:color .15s}
+.si:hover .si-icon{color:var(--blue)}
+.si-label{font-size:13px;opacity:0;transition:opacity .15s;pointer-events:none}
+#sidebar.exp .si-label{opacity:1}
+
+/* TOOLTIP on collapsed */
+.si-tip{position:absolute;left:calc(var(--sidebar-w) + 8px);top:50%;transform:translateY(-50%);background:#333;color:white;font-size:12px;padding:4px 10px;border-radius:4px;white-space:nowrap;pointer-events:none;opacity:0;z-index:9999;transition:opacity .15s;border:none}
+#sidebar:not(.exp) .si:hover .si-tip{opacity:1}
+#sidebar.exp .si-tip{display:none}
+
+.sib-divider{height:1px;background:var(--border);margin:4px 8px}
+
+/* Hamburger */
+.hbg{background:none;border:none;cursor:pointer;width:100%;height:44px;display:flex;align-items:center;justify-content:center;color:#555}
+.hbg:hover{background:var(--bg-hover);color:var(--blue)}
+
+/* Dark mode row */
+.dm-row{display:flex;align-items:center;cursor:pointer;white-space:nowrap}
+.dm-row:hover{background:var(--bg-hover)}
+.dm-icon{width:var(--sidebar-w);height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#555}
+.dm-label{font-size:13px;opacity:0;transition:opacity .15s;flex:1}
+#sidebar.exp .dm-label{opacity:1}
+.dm-toggle{width:34px;height:18px;background:#ccc;border-radius:9px;position:relative;border:none;cursor:pointer;flex-shrink:0;transition:background .2s;display:none;margin-right:12px}
+#sidebar.exp .dm-toggle{display:block}
+.dm-toggle::after{content:'';position:absolute;width:14px;height:14px;background:white;border-radius:50%;top:2px;left:2px;transition:left .2s}
+.dm-toggle.on{background:var(--blue)}
+.dm-toggle.on::after{left:18px}
+
+/* Sidebar version label */
+.sv{font-size:11px;color:#aaa;padding:4px 0 8px;text-align:center;opacity:0;transition:opacity .15s;white-space:nowrap}
+#sidebar.exp .sv{opacity:1}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:white;position:relative}
+
+/* MODULE NAV */
+#modnav{height:var(--moduelnav-h);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 8px;flex-shrink:0;overflow-x:auto}
+#modnav::-webkit-scrollbar{height:0}
+.mtab{padding:0 14px;height:100%;display:inline-flex;align-items:center;cursor:pointer;font-size:14px;color:var(--text);border-bottom:2px solid transparent;white-space:nowrap;text-decoration:none;flex-shrink:0;margin-bottom:-1px}
+.mtab:hover{color:var(--blue)}
+.mtab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+
+/* LOADING OVERLAY */
+#ldr{display:none;position:absolute;inset:0;background:rgba(255,255,255,.88);z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#ldr.on{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ldr-text{font-size:13px;color:var(--text-muted)}
+
+/* CONTENT */
+#content{flex:1;overflow:auto;position:relative}
+.mpanel{display:none;height:100%}
+.mpanel.active{display:flex;flex-direction:column;height:100%}
+
+/* SPLIT LAYOUT */
+.split{display:flex;flex:1;overflow:hidden;min-height:0}
+.lp{width:310px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.lp-hd{padding:10px 12px;border-bottom:1px solid var(--border)}
+.lp-body{flex:1;overflow-y:auto}
+.lp-foot{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px}
+.rc{flex:1;overflow-y:auto}
+
+/* SEGMENT SUB-NAV */
+.snav{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);gap:8px;flex-shrink:0}
+.spill{padding:4px 14px;border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;background:white;color:var(--text)}
+.spill.active{background:var(--blue);color:white;border-color:var(--blue)}
+.spill.dash{border-style:dashed;color:#aaa}
+.snav-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.date-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;background:white;white-space:nowrap}
+.date-btn:hover{background:var(--bg-light)}
+.notes-btn{display:flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:4px;font-size:12px;cursor:pointer;background:white}
+.nb{background:var(--blue);color:white;border-radius:10px;padding:1px 6px;font-size:11px}
+
+/* SEARCH */
+.srch{width:100%;padding:7px 10px 7px 30px;border:1px solid var(--border);border-radius:4px;font-size:13px;background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") 8px center no-repeat}
+.srch:focus{outline:none;border-color:var(--blue)}
+
+/* FILTER ROW */
+.frow{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-muted)}
+.frow-l{display:flex;align-items:center;gap:6px}
+
+/* SELECT ROW */
+.selrow{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;font-size:12px;color:var(--text-muted)}
+.selrow span{display:flex;gap:12px}
+.selrow span a{cursor:pointer;color:var(--text-muted)}
+.selrow span a:hover{color:var(--blue)}
+
+/* LIST ITEM */
+.li{padding:9px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-left:2px solid transparent;font-size:13px;color:var(--text)}
+.li:hover{background:var(--bg-light)}
+.li.active{background:var(--blue-light);color:var(--blue);border-left-color:var(--blue)}
+.li-sub{font-size:11px;color:#aaa;font-weight:400}
+
+/* SECTION HEADER */
+.sec-hd{font-size:11px;font-weight:600;color:var(--text-muted);padding:12px 16px 4px;text-transform:uppercase;letter-spacing:.5px}
+
+/* REPORT TREE ITEM */
+.rti{padding:8px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;border-left:2px solid transparent}
+.rti:hover{background:var(--bg-light)}
+.rti.active{background:var(--blue-light);color:var(--blue);border-left-color:var(--blue)}
+.rti svg{flex-shrink:0;color:currentColor}
+
+/* BUTTONS */
+.btn{padding:7px 16px;border-radius:4px;border:none;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
+.btn-blue{background:var(--blue);color:white}
+.btn-blue:hover{background:var(--blue-dark)}
+.btn-green{background:var(--green);color:white;flex:1;justify-content:center}
+.btn-green:hover{background:var(--green-dark)}
+.btn-out{background:white;color:var(--text);border:1px solid var(--border)}
+.btn-out:hover{background:var(--bg-light)}
+
+/* CONTENT HEADER */
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:16px}
+.ct{font-size:22px;font-weight:600}
+.ca{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.cmeta{display:flex;align-items:center;gap:20px;font-size:12px;color:var(--text-muted);padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+
+/* WIDGET */
+.widget{border:1px solid var(--border);border-radius:6px;margin-bottom:16px;overflow:hidden}
+.wh{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;font-size:13px;font-weight:500}
+.wb{padding:12px 16px}
+
+/* GRID */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+
+/* MAP */
+.map-ph{background:#d8e5f0;border-radius:4px;height:230px;position:relative;overflow:hidden}
+
+/* CHART PLACEHOLDER */
+.chart-ph{background:var(--bg-light);border-radius:4px;overflow:hidden}
+
+/* BIG NUMBER */
+.bignum{font-size:38px;font-weight:300;padding:16px}
+
+/* PIE CHART */
+.pie{width:90px;height:90px;border-radius:50%;background:conic-gradient(#1E40AF 0 75%,#3B82F6 75% 100%);margin:8px auto}
+
+/* TAGS */
+.tag-dot{display:inline-block;width:8px;height:8px;background:#4CAF50;border-radius:50%;margin-right:6px}
+
+/* CONTENT TABS */
+.ctabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:16px}
+.ctab{padding:9px 14px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:2px solid transparent;margin-bottom:-1px}
+.ctab:hover{color:var(--blue)}
+.ctab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;padding:9px 16px;font-size:12px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.tbl th:hover{color:var(--text)}
+.tbl td{padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--bg-light)}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:12px}
+.tbl-search{max-width:400px;flex:1}
+.pg{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)}
+.pg-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:white}
+.pg-btn:hover{background:var(--bg-light)}
+
+/* INTEGRATIONS */
+.int-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:20px}
+.int-card{border:1px solid var(--border);border-radius:8px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.int-type{font-size:10px;text-transform:uppercase;color:var(--text-muted);font-weight:600;letter-spacing:.5px}
+.int-ico{width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.int-name{font-weight:600;font-size:14px}
+.int-desc{font-size:12px;color:var(--text-muted);line-height:1.5;flex:1}
+.int-btn{padding:6px 14px;border:1px solid var(--border);border-radius:4px;background:white;font-size:12px;cursor:pointer;text-align:center}
+.int-btn:hover{background:var(--bg-light)}
+
+/* OVERVIEW CARDS */
+.ov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.ov-card{border:1px solid var(--border);border-radius:6px;padding:14px 18px}
+.ov-label{font-size:12px;color:var(--text-muted);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.ov-val{font-size:22px;font-weight:600;display:flex;align-items:center;gap:8px}
+
+/* SETUP CHECK */
+.sc-wrap{border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:20px}
+.sc{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border)}
+.sc:last-child{border-bottom:none}
+.sc-name{display:flex;align-items:center;gap:10px;font-size:13px}
+.sc-ok{color:#2E7D32;font-size:12px;font-weight:500}
+
+/* EMPTY STATE */
+.es{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:300px;text-align:center;gap:10px;color:#aaa}
+.es-title{font-size:16px;font-weight:500}
+.es-sub{font-size:13px;color:var(--text-muted)}
+
+/* DEBUG FORM */
+.dbg-banner{background:linear-gradient(135deg,#dce7f5,#e8d5f5);height:130px;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;flex-direction:column;gap:4px}
+.dbg-form{border:1px solid var(--border);border-radius:8px;padding:24px;max-width:480px;margin:24px auto;background:white}
+.dbg-form label{font-size:12px;font-weight:600;display:block;margin-bottom:4px}
+.dbg-form label .req{color:red}
+.inp{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;display:flex;align-items:center;gap:6px}
+.inp:focus{outline:none;border-color:var(--blue)}
+.info-box{background:#EBF4FF;color:#1a57b0;padding:9px 14px;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+
+/* PEOPLE */
+.live-badge{display:inline-flex;align-items:center;gap:6px;background:#E8F5E9;color:#2E7D32;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:500}
+.live-dot{width:7px;height:7px;background:#4CAF50;border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pstat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)}
+.pnum{font-size:26px;font-weight:600}
+
+/* ACCOUNT */
+.ac-card{border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px}
+.ac-title{font-size:15px;font-weight:600;margin-bottom:8px}
+.ac-sub{font-size:13px;color:var(--text-muted);line-height:1.5}
+
+/* CONDITIONS BLOCK */
+.cond{border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:12px;font-size:13px}
+.cond-and{text-align:center;font-size:11px;color:#aaa;margin:8px 0}
+.cond a{color:var(--green);text-decoration:none}
+.cond b{color:#9C27B0}
+
+/* ECOMMERCE */
+.ec-lp{width:220px}
+
+/* CHANGELOG */
+.cl-item{padding:16px;border-bottom:1px solid var(--border)}
+.cl-ver{font-weight:600;font-size:14px;margin-bottom:2px}
+.cl-date{font-size:12px;color:var(--text-muted);margin-bottom:8px}
+.cl-desc{font-size:13px;color:var(--text-muted);line-height:1.5}
+
+/* GOALS CHART */
+.gc{background:var(--bg-light);border-radius:4px;padding:8px;margin-top:16px;overflow:hidden}
+
+/* SIMPLE CONTENT PAGE */
+.simple-pg{padding:24px}
+.simple-pg h2{font-size:22px;font-weight:600;margin-bottom:8px}
+.simple-pg p{color:var(--text-muted);font-size:14px}
+
+/* DARK MODE */
+body.dark{--bg:#1e1e2e;--bg-light:#16213e;--bg-hover:#252540;--border:#3a3a5c;--text:#e0e0e0;--text-muted:#9e9e9e;--blue-light:#0d1b3e}
+body.dark .top-bar,body.dark #sidebar,body.dark #modnav,body.dark .lp,body.dark .rc,body.dark .widget,body.dark .int-card,body.dark .ov-card,body.dark .dbg-form,body.dark .ac-card,body.dark .cond,body.dark .site-selector,body.dark .site-dropdown,body.dark .spill,body.dark .date-btn,body.dark .notes-btn,body.dark .btn-out{background:#1e1e2e;color:var(--text)}
+body.dark .map-ph{background:#2a3a50}
+body.dark .chart-ph,body.dark .dbg-banner{background:#16213e}
+body.dark .srch{background:#252540;color:var(--text);border-color:var(--border)}
+body.dark .inp{background:#252540;color:var(--text);border-color:var(--border)}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#aaa}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<!-- TOP BAR -->
+<header class="top-bar">
+  <div class="logo">PIWIK <span class="pro">PRO</span></div>
+  <div class="header-right">
+    <a class="upgrade-link" href="#">Upgrade</a>
+    <div class="site-selector" id="site-sel" onclick="toggleDD()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span class="site-label" id="sitelbl">Piwik PRO</span>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+      <div class="site-dropdown" id="sitedd">
+        <div class="site-opt active" onclick="pickSite(event,'Piwik PRO',this)">Piwik PRO</div>
+        <div class="site-opt" onclick="pickSite(event,'User docs',this)">User docs</div>
+        <div class="site-opt" onclick="pickSite(event,'Developer docs',this)">Developer docs</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+  <!-- SIDEBAR WRAPPER -->
+  <div id="sw">
+    <nav id="sidebar">
+
+      <!-- TOP SECTION -->
+      <div>
+        <button class="hbg" onclick="toggleSB()" title="Toggle navigation">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+
+        <div class="si active" id="nav-analytics" onclick="goModule('analytics')">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+          <span class="si-label">Analytics</span>
+          <span class="si-tip">Analytics</span>
+        </div>
+
+        <div class="si" id="nav-data-activation" onclick="goModule('data-activation')">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span class="si-label">Data Activation</span>
+          <span class="si-tip">Data Activation</span>
+        </div>
+
+        <div class="si" id="nav-tag-manager" onclick="goModule('tag-manager')">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
+          <span class="si-label">Tag Manager</span>
+          <span class="si-tip">Tag Manager</span>
+        </div>
+      </div>
+
+      <!-- BOTTOM SECTION -->
+      <div>
+        <div class="sib-divider"></div>
+
+        <div class="si" id="nav-administration" onclick="goModule('administration')">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+          <span class="si-label">Administration</span>
+          <span class="si-tip">Administration</span>
+        </div>
+
+        <a class="si" href="https://help.piwik.pro" target="_blank">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+          <span class="si-label">Help Center</span>
+          <span class="si-tip">Help Center</span>
+        </a>
+
+        <div class="si" onclick="alert('Profile settings')">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <span class="si-label">j.doe@email.com</span>
+          <span class="si-tip">Profile</span>
+        </div>
+
+        <a class="si" href="https://developers.piwik.pro" target="_blank">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>
+          <span class="si-label">Developer docs</span>
+          <span class="si-tip">Developer docs</span>
+        </a>
+
+        <div class="dm-row" onclick="toggleDM()">
+          <span class="dm-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
+          <span class="dm-label">Dark mode</span>
+          <button class="dm-toggle" id="dmt" onclick="event.stopPropagation();toggleDM()"></button>
+        </div>
+
+        <div class="si" onclick="if(confirm('Log out?')){}">
+          <span class="si-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span>
+          <span class="si-label">Log out</span>
+          <span class="si-tip">Log out</span>
+        </div>
+
+        <div class="sv">Version: 18.61.1</div>
+      </div>
+    </nav>
+  </div>
+
+  <!-- OVERLAY -->
+  <div id="sovl" onclick="closeSB()"></div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="modnav"></div>
+    <div id="ldr"><div class="spinner"></div><span class="ldr-text">Loading...</span></div>
+    <div id="content">
+      <div class="mpanel active" id="panel-analytics"></div>
+      <div class="mpanel" id="panel-data-activation"></div>
+      <div class="mpanel" id="panel-tag-manager"></div>
+      <div class="mpanel" id="panel-administration"></div>
+    </div>
+  </div>
+
+</div><!-- app-body -->
+</div><!-- app -->
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let curMod = 'analytics';
+let curTabs = {analytics:'dashboards','data-activation':'people','tag-manager':'tags',administration:'sites-apps'};
+let sbExp = false, darkMode = false;
+
+const MODS = {
+  analytics:{tabs:['Dashboards','Real-time dashboards','Reports','Custom reports','Goals','Ecommerce','Integrations','Settings']},
+  'data-activation':{tabs:['People','Audiences','Activations','Data import','Attributes']},
+  'tag-manager':{tabs:['Tags','Triggers','Variables','Meta setup','Changelog','Debug mode','Settings','Overview']},
+  administration:{tabs:['Sites & apps','Meta sites & apps','Users','Groups','Account']}
+};
+
+function tid(n){return n.toLowerCase().replace(/\s*&\s*/g,'-').replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-')}
+
+// ─── SIDEBAR ─────────────────────────────────────────────
+function toggleSB(){sbExp?closeSB():openSB()}
+function openSB(){sbExp=true;document.getElementById('sidebar').classList.add('exp');document.getElementById('sovl').classList.add('on')}
+function closeSB(){sbExp=false;document.getElementById('sidebar').classList.remove('exp');document.getElementById('sovl').classList.remove('on')}
+
+// ─── SITE DROPDOWN ───────────────────────────────────────
+function toggleDD(e){document.getElementById('sitedd').classList.toggle('open');if(e)e.stopPropagation()}
+function pickSite(e,name,el){e.stopPropagation();document.getElementById('sitelbl').textContent=name;document.querySelectorAll('.site-opt').forEach(o=>o.classList.remove('active'));el.classList.add('active');document.getElementById('sitedd').classList.remove('open')}
+document.addEventListener('click',()=>document.getElementById('sitedd').classList.remove('open'));
+
+// ─── DARK MODE ───────────────────────────────────────────
+function toggleDM(){darkMode=!darkMode;document.body.classList.toggle('dark',darkMode);document.getElementById('dmt').classList.toggle('on',darkMode)}
+
+// ─── MODULE SWITCH (3 sec loading) ───────────────────────
+function goModule(mod){
+  closeSB();
+  if(mod===curMod)return;
+  const ldr=document.getElementById('ldr');
+  ldr.classList.add('on');
+  setTimeout(()=>{
+    ldr.classList.remove('on');
+    curMod=mod;
+    document.querySelectorAll('.si[id^=nav-]').forEach(el=>el.classList.remove('active'));
+    const nav=document.getElementById('nav-'+mod);
+    if(nav)nav.classList.add('active');
+    document.querySelectorAll('.mpanel').forEach(el=>el.classList.remove('active'));
+    const panel=document.getElementById('panel-'+mod);
+    if(panel){panel.classList.add('active');panel.innerHTML='';}
+    renderNav(mod);
+    renderContent(mod,curTabs[mod]);
+  },3000);
+}
+
+// ─── TAB SWITCH (instant) ────────────────────────────────
+function goTab(mod,tab){
+  curTabs[mod]=tab;
+  renderNav(mod);
+  renderContent(mod,tab);
+}
+
+// ─── NAV RENDER ──────────────────────────────────────────
+function renderNav(mod){
+  const nav=document.getElementById('modnav');
+  const active=curTabs[mod];
+  nav.innerHTML=MODS[mod].tabs.map(t=>{
+    const id=tid(t);
+    return`<span class="mtab${id===active?' active':''}" onclick="goTab('${mod}','${id}')">${t}</span>`;
+  }).join('');
+}
+
+// ─── CONTENT RENDER ──────────────────────────────────────
+function renderContent(mod,tab){
+  const panel=document.getElementById('panel-'+mod);
+  if(!panel)return;
+  const fn=CONTENT[mod]&&CONTENT[mod][tab];
+  panel.innerHTML=typeof fn==='function'?fn():simpleHTML(tab);
+}
+
+// ─── LEFT PANEL SELECTION ────────────────────────────────
+function pickLI(el){el.closest('.lp-body').querySelectorAll('.li').forEach(e=>e.classList.remove('active'));el.classList.add('active')}
+function pickRTI(el){el.closest('.lp-body').querySelectorAll('.rti').forEach(e=>e.classList.remove('active'));el.classList.add('active')}
+function pickSNI(el){el.closest('.lp-body').querySelectorAll('.rti,.li').forEach(e=>e.classList.remove('active'));el.classList.add('active')}
+
+// ─── SVG ICONS ───────────────────────────────────────────
+const ICO={
+  cal:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  user:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  sync:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+  filter:'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18l-7 9v5l-4 2v-7z"/></svg>',
+  dots:'···',
+  drag:'⠿',
+  link:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  export:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  edit:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+};
+
+// ─── SIMPLE FALLBACK PAGE ────────────────────────────────
+function simpleHTML(tab){
+  const title=tab.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  return`<div class="simple-pg"><h2>${title}</h2><p style="margin-top:8px;color:var(--text-muted)">This section is under construction.</p></div>`;
+}
+
+// ─── CONTENT GENERATORS ──────────────────────────────────
+const CONTENT={
+
+// ══════════════════════════════════════
+// ANALYTICS
+// ══════════════════════════════════════
+analytics:{
+
+dashboards:()=>`
+<div class="snav">
+  <span class="spill active">All visitors</span>
+  <span class="spill dash">+</span>
+  <div class="snav-right">
+    <span class="date-btn">${ICO.cal} Jan 1, 2021 – Mar 30, 2021</span>
+    <span class="notes-btn">Notes <span class="nb">5</span></span>
+  </div>
+</div>
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="selrow"><label><input type="checkbox" style="margin-right:6px">0 selected</label><span><a>Copy</a><a>Delete</a><a>Move</a></span></div>
+      <div style="padding:8px 16px 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;cursor:pointer">
+          <span>▾ Private</span><span style="font-size:12px;color:var(--blue);cursor:pointer">+ Add a folder</span>
+        </div>
+        <div style="text-align:center;color:#aaa;font-size:12px;padding:16px 0">No items</div>
+      </div>
+      <div style="padding:8px 16px 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px">
+          <span style="cursor:pointer">▾ Shared</span><span style="font-size:12px;color:var(--blue);cursor:pointer">+ Add a folder</span>
+        </div>
+      </div>
+      <div class="li active" onclick="pickLI(this)">Marketing channels performance</div>
+      <div class="li" onclick="pickLI(this)">Marketing performance overview</div>
+      <div class="li" onclick="pickLI(this)">Paid media effectiveness</div>
+      <div class="li" onclick="pickLI(this)">Goal conversions</div>
+    </div>
+    <div class="lp-foot">
+      <button class="btn btn-green">+ Add a dashboard</button>
+      <button class="btn btn-out">+ Add a folder</button>
+    </div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <h1 class="ct">Marketing channels performance</h1>
+        <div class="ca">
+          <button class="btn btn-blue">Add a widget</button>
+          <button class="btn btn-out">${ICO.link} Share</button>
+          <button class="btn btn-out">${ICO.dots}</button>
+        </div>
+      </div>
+      <div class="cmeta">
+        <span>${ICO.user} jdoe@mail.com</span>
+        <span>${ICO.cal} Wednesday, October 12, 2022 at 09:20 AM</span>
+        <span>${ICO.sync} Wednesday, October 12, 2022 at 09:20 AM</span>
+      </div>
+      <div class="widget">
+        <div class="wh"><span>${ICO.drag} Top channels by country</span><span>${ICO.dots}</span></div>
+        <div class="wb">
+          <div class="map-ph">
+            <svg viewBox="0 0 800 230" width="100%" height="100%" style="position:absolute;inset:0">
+              <rect width="800" height="230" fill="#c9d8e8"/>
+              <path d="M100,80 Q200,40 300,70 Q400,100 500,60 Q600,30 700,70 L700,180 Q600,160 500,170 Q400,180 300,160 Q200,140 100,160Z" fill="#dce8f0"/>
+              <path d="M150,90 Q180,70 220,85 Q260,100 280,80 L280,140 Q260,150 220,145 Q180,140 150,140Z" fill="#e8eff8"/>
+              <path d="M320,60 Q380,40 440,55 Q480,65 520,50 Q560,35 600,55 L600,130 Q560,140 520,130 Q480,120 440,130 Q380,140 320,130Z" fill="#e8eff8"/>
+              <circle cx="420" cy="88" r="28" fill="#1E40AF" opacity=".8"/>
+              <circle cx="455" cy="72" r="11" fill="#60A5FA" opacity=".75"/>
+              <circle cx="390" cy="94" r="8" fill="#60A5FA" opacity=".75"/>
+              <circle cx="468" cy="80" r="9" fill="#60A5FA" opacity=".7"/>
+              <circle cx="590" cy="100" r="14" fill="#60A5FA" opacity=".65"/>
+              <circle cx="220" cy="100" r="7" fill="#93C5FD" opacity=".7"/>
+            </svg>
+            <div style="position:absolute;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px">
+              <button class="btn btn-out" style="width:26px;height:26px;padding:0;justify-content:center">↺</button>
+              <button class="btn btn-out" style="width:26px;height:26px;padding:0;justify-content:center">+</button>
+              <button class="btn btn-out" style="width:26px;height:26px;padding:0;justify-content:center">−</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid3">
+        <div class="widget">
+          <div class="wh"><span>${ICO.drag} Paid vs non-paid (sessions)</span><span>${ICO.dots}</span></div>
+          <div class="wb" style="display:flex;align-items:center;justify-content:center;height:140px"><div class="pie"></div></div>
+        </div>
+        <div class="widget">
+          <div class="wh"><span>${ICO.drag} Total conversions</span><span>${ICO.dots}</span></div>
+          <div class="wb" style="display:flex;justify-content:center"><div class="bignum">429</div></div>
+        </div>
+        <div class="widget">
+          <div class="wh"><span>${ICO.drag} Paid (sessions)</span><span>${ICO.dots}</span></div>
+          <div class="wb" style="display:flex;justify-content:center"><div class="bignum">90</div></div>
+        </div>
+      </div>
+      <div class="widget">
+        <div class="wh"><span>${ICO.drag} Visitors</span><span>${ICO.dots}</span></div>
+        <div class="wb">
+          <div style="font-size:12px;color:var(--blue);margin-bottom:6px">■ Visitors</div>
+          <div class="chart-ph" style="height:110px">
+            <svg viewBox="0 0 700 100" width="100%" height="100%">
+              <polyline points="0,70 60,50 120,55 180,35 240,42 300,30 360,45 420,35 480,50 540,42 600,38 700,40" fill="none" stroke="var(--blue)" stroke-width="2"/>
+              <polyline points="0,70 60,50 120,55 180,35 240,42 300,30 360,45 420,35 480,50 540,42 600,38 700,40 700,100 0,100" fill="var(--blue)" opacity=".08"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+'real-time-dashboards':()=>`
+<div class="snav">
+  <span class="spill active">All visitors</span>
+  <span class="spill dash">+</span>
+  <div class="snav-right">
+    <span style="font-size:12px;color:var(--text-muted)">Lookback window (min):</span>
+    <span class="date-btn">60 min ▾</span>
+  </div>
+</div>
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="selrow"><label><input type="checkbox" style="margin-right:6px">0 selected</label><span><a>Copy</a><a>Delete</a><a>Move</a></span></div>
+      <div style="padding:8px 16px"><div style="display:flex;align-items:center;justify-content:space-between;font-size:13px"><span>▾ Private</span><span style="font-size:12px;color:var(--blue)">+ Add a folder</span></div><div style="text-align:center;color:#aaa;font-size:12px;padding:12px 0">No items</div></div>
+      <div style="padding:8px 16px"><div style="display:flex;align-items:center;justify-content:space-between;font-size:13px"><span>▾ Shared</span><span style="font-size:12px;color:var(--blue)">+ Add a folder</span></div></div>
+      <div class="li active" onclick="pickLI(this)">Real time visits overview</div>
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a real-time dashboard</button></div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <h1 class="ct">Real-time visits overview</h1>
+        <div class="ca">
+          <button class="btn btn-blue">Add a widget</button>
+          <button class="btn btn-out">${ICO.link} Share</button>
+          <button class="btn btn-out">${ICO.dots}</button>
+        </div>
+      </div>
+      <div class="cmeta">
+        <span>${ICO.user} jdoe@mail.com</span>
+        <span>${ICO.cal} Wednesday, October 12, 2022 at 09:20 AM</span>
+        <span>${ICO.sync} Wednesday, October 12, 2022 at 09:20 AM</span>
+      </div>
+      <div class="grid3" style="margin-bottom:16px">
+        <div class="widget"><div class="wh"><span>${ICO.drag} Total visitors</span><span>${ICO.dots}</span></div><div class="wb"><div class="bignum" style="font-size:48px;padding:8px 4px">12</div></div></div>
+        <div class="widget"><div class="wh"><span>${ICO.drag} Page views</span><span>${ICO.dots}</span></div><div class="wb"><div class="bignum" style="font-size:48px;padding:8px 4px">5</div></div></div>
+        <div class="widget">
+          <div class="wh"><span>${ICO.drag} Visitors by city</span><span>${ICO.dots}</span></div>
+          <div class="wb" style="padding:4px">
+            <div class="map-ph" style="height:150px">
+              <svg viewBox="0 0 400 150" width="100%" height="100%" style="position:absolute;inset:0">
+                <rect width="400" height="150" fill="#c9d8e8"/>
+                <path d="M50,40 Q150,20 250,40 Q350,60 390,40 L390,120 Q350,130 250,120 Q150,110 50,120Z" fill="#dce8f0"/>
+                <circle cx="220" cy="55" r="20" fill="#1E40AF" opacity=".8"/>
+                <circle cx="235" cy="45" r="8" fill="#60A5FA" opacity=".7"/>
+                <circle cx="205" cy="58" r="6" fill="#60A5FA" opacity=".7"/>
+                <circle cx="300" cy="60" r="9" fill="#60A5FA" opacity=".6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="widget">
+          <div class="wh"><span>${ICO.drag} Desktop vs Mobile</span><span>${ICO.dots}</span></div>
+          <div class="wb">
+            <div style="font-size:12px;color:var(--blue);margin-bottom:8px">■ Visitors</div>
+            <div class="chart-ph" style="height:140px">
+              <svg viewBox="0 0 300 120" width="100%" height="120">
+                <rect x="40" y="20" width="80" height="90" fill="#60A5FA" opacity=".7"/>
+                <rect x="160" y="50" width="80" height="60" fill="#93C5FD" opacity=".7"/>
+                <text x="80" y="125" text-anchor="middle" font-size="10" fill="#666">Desktop</text>
+                <text x="200" y="125" text-anchor="middle" font-size="10" fill="#666">Smartphone</text>
+                <line x1="20" y1="20" x2="20" y2="110" stroke="#ccc" stroke-width="1"/>
+                <line x1="20" y1="110" x2="300" y2="110" stroke="#ccc" stroke-width="1"/>
+                <text x="14" y="24" text-anchor="end" font-size="9" fill="#999">8</text>
+                <text x="14" y="60" text-anchor="end" font-size="9" fill="#999">4</text>
+                <text x="14" y="110" text-anchor="end" font-size="9" fill="#999">0</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="widget">
+          <div class="wh"><span>${ICO.drag} Visitors over time</span><span>${ICO.dots}</span></div>
+          <div class="wb">
+            <div style="font-size:12px;color:var(--blue);margin-bottom:8px">■ Visitors</div>
+            <div class="chart-ph" style="height:140px">
+              <svg viewBox="0 0 400 120" width="100%" height="120">
+                <polyline points="0,80 30,70 60,65 90,50 120,55 150,48 180,60 210,52 240,58 270,45 300,65 330,55 360,62 400,70" fill="none" stroke="var(--blue)" stroke-width="2"/>
+                <polyline points="0,80 30,70 60,65 90,50 120,55 150,48 180,60 210,52 240,58 270,45 300,65 330,55 360,62 400,70 400,120 0,120" fill="var(--blue)" opacity=".08"/>
+                <text x="0" y="115" font-size="8" fill="#999">09:00 AM</text>
+                <text x="180" y="115" font-size="8" fill="#999">11:00 AM</text>
+                <text x="360" y="115" font-size="8" fill="#999">Now</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+reports:()=>`
+<div class="snav">
+  <span class="spill active">All visitors</span>
+  <span class="spill dash">+</span>
+  <div class="snav-right">
+    <span class="date-btn">${ICO.cal} 24.04.2023</span>
+    <span class="notes-btn">Notes <span class="nb">5</span></span>
+  </div>
+</div>
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="lp-body">
+      <div class="sec-hd">Audience</div>
+      ${[['Audience overview',true],['Session log',false],['Devices & software',false],['Locations',false],['Engagement',false],['Custom dimensions',false],['Custom variables',false],['Consent',false]].map(([n,a])=>`<div class="rti${a?' active':''}" onclick="pickRTI(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>${n}</div>`).join('')}
+      <div class="sec-hd" style="margin-top:8px">Acquisition</div>
+      ${['Channels','Search engines','Websites & social','Campaigns','Google search console','Google ads'].map(n=>`<div class="rti" onclick="pickRTI(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>${n}</div>`).join('')}
+    </div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <h1 class="ct">Audience overview</h1>
+        <div class="ca">
+          <button class="btn btn-out">${ICO.link} Share</button>
+          <button class="btn btn-out">${ICO.export} Export</button>
+          <button class="btn btn-out">${ICO.dots}</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+'custom-reports':()=>`
+<div class="snav">
+  <span class="spill active">All visitors</span>
+  <span class="spill dash">+</span>
+  <div class="snav-right">
+    <span class="date-btn">${ICO.cal} 24.04.2023 vs 17.04.2023</span>
+    <span class="date-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Lookback window: 60 min ▾</span>
+  </div>
+</div>
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="selrow"><label><input type="checkbox" style="margin-right:6px">0 selected</label><span><a>Copy</a><a>Delete</a><a>Move</a></span></div>
+      <div style="padding:8px 16px"><span style="font-size:13px;cursor:pointer">▾ Private</span><div style="text-align:center;color:#aaa;font-size:12px;padding:12px 0">No items</div></div>
+      <div style="padding:8px 16px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>▾ Shared</span><span style="font-size:12px;color:var(--blue)">+ Add a folder</span></div></div>
+      ${[['Conversions on goal by channel','Table',true],['Session time impact on conversions','Bar chart',false],['Activity on website areas','Table',false],['Main channel performance','Table',false],['Goals overview','Table',false],['Loan calculation funnel','Funnel',false],['Search user flow','User flow',false],['Goal reversed flow','User flow',false],['Loans attribution','Attribution',false],['Ecommerce orders channels attribution','Attribution',false]].map(([n,t,a])=>`<div class="li${a?' active':''}" onclick="pickLI(this)" style="justify-content:space-between"><span>${n}</span><span style="font-size:11px;color:#aaa">${t}</span></div>`).join('')}
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a report</button><button class="btn btn-out">+ Add a folder</button></div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <h1 class="ct">Conversions on goal by channel</h1>
+        <div class="ca">
+          <button class="btn btn-blue">${ICO.edit} Edit</button>
+          <button class="btn btn-out">${ICO.link} Share</button>
+          <button class="btn btn-out">${ICO.export} Export</button>
+          <button class="btn btn-out">${ICO.dots}</button>
+        </div>
+      </div>
+      <div class="cmeta">
+        <span>${ICO.user} jdoe@mail.com</span>
+        <span>${ICO.cal} Wednesday, October 12, 2022 at 09:20 AM</span>
+        <span>${ICO.sync} Wednesday, October 12, 2022 at 09:20 AM</span>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+goals:()=>`
+<div class="snav">
+  <span class="spill active">All visitors</span>
+  <span class="spill dash">+</span>
+  <div class="snav-right">
+    <span class="date-btn">${ICO.cal} Jan 1, 2021 – Mar 30, 2021</span>
+    <span class="notes-btn">Notes <span class="nb">5</span></span>
+  </div>
+</div>
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="selrow"><label><input type="checkbox" style="margin-right:6px">0 selected</label><span><a>Delete</a><a>Move</a></span></div>
+      <div class="li active" onclick="pickLI(this)">Activate your debit card</div>
+      <div class="li" onclick="pickLI(this)">Add new recipient</div>
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a goal</button><button class="btn btn-out">+ Add a folder</button></div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <h1 class="ct">Activate your debit card</h1>
+        <div class="ca">
+          <button class="btn btn-blue">${ICO.edit} Edit</button>
+          <button class="btn btn-out">${ICO.link} Share</button>
+          <button class="btn btn-out">${ICO.dots}</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Goal ID: 55677390-fh57789-48885</div>
+      <div class="ctabs">
+        <span class="ctab active">Overview</span>
+        <span class="ctab">Session log</span>
+        <span class="ctab">User flow</span>
+      </div>
+      <div class="grid3" style="margin-bottom:20px">
+        <div class="ov-card"><div class="ov-label">Activate your debit card goal conversion rate</div><div class="ov-val" style="font-size:18px;border-top:3px solid var(--blue);padding-top:8px;margin-top:8px">0.62%</div></div>
+        <div class="ov-card"><div class="ov-label">Activate your debit card goal conversions</div><div class="ov-val" style="font-size:18px;border-top:3px solid var(--blue);padding-top:8px;margin-top:8px">14</div></div>
+        <div class="ov-card"><div class="ov-label">Sessions</div><div class="ov-val" style="font-size:18px;border-top:3px solid #F97316;padding-top:8px;margin-top:8px">2,268</div></div>
+        <div class="ov-card"><div class="ov-label">Sum of Activate your debit card goal revenue</div><div class="ov-val" style="font-size:18px;padding-top:8px;margin-top:8px">$0.00</div></div>
+      </div>
+      <div class="chart-ph" style="height:200px;padding:12px;position:relative">
+        <svg viewBox="0 0 700 160" width="100%" height="100%">
+          <polyline points="0,140 30,130 60,120 90,100 120,95 150,80 180,90 210,50 240,85 270,70 300,100 330,60 360,80 390,90 420,70 450,80 480,60 510,75 540,65 560,70 580,78 620,60 640,70 680,65 700,70" fill="none" stroke="#F97316" stroke-width="1.5" opacity=".7"/>
+          <polyline points="0,155 100,155 100,155 210,120 210,155 250,130 250,155 330,100 330,155 420,120 420,155 450,115 450,155 520,110 520,155 620,115 620,155 680,120 680,155" fill="none" stroke="var(--blue)" stroke-width="2"/>
+          <polyline points="0,155 100,155 100,155 210,120 210,155 250,130 250,155 330,100 330,155 420,120 420,155 450,115 450,155 520,110 520,155 620,115 620,155 680,120 680,155 700,155 0,155" fill="var(--blue)" opacity=".1"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+ecommerce:()=>`
+<div class="snav">
+  <span class="spill active">All visitors</span>
+  <span class="spill dash">+</span>
+  <div class="snav-right">
+    <span class="date-btn">${ICO.cal} Jan 1, 2021 – Mar 30, 2021</span>
+    <span class="notes-btn">Notes <span class="nb">5</span></span>
+  </div>
+</div>
+<div class="split">
+  <div class="lp ec-lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="lp-body">
+      <div class="sec-hd">Acquisition</div>
+      <div class="rti active" onclick="pickRTI(this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Channels</div>
+      <div class="rti" onclick="pickRTI(this)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Landing pages</div>
+      <div class="rti" onclick="pickRTI(this)">Campaigns</div>
+      <div class="rti" onclick="pickRTI(this)">Attribution</div>
+      <div class="sec-hd">Ecommerce</div>
+      <div class="rti" onclick="pickRTI(this)">Overview</div>
+      <div class="rti" onclick="pickRTI(this)">Sessions with orders</div>
+      <div class="rti" onclick="pickRTI(this)">Devices</div>
+      <div class="rti" onclick="pickRTI(this)">Countries</div>
+      <div class="sec-hd">Shopping behavior</div>
+      <div class="rti" onclick="pickRTI(this)">Shopping stages</div>
+      <div class="rti" onclick="pickRTI(this)">Days and sessions to order</div>
+      <div class="rti" onclick="pickRTI(this)">Orders</div>
+      <div class="rti" onclick="pickRTI(this)">Products</div>
+      <div class="sec-hd" style="margin-top:8px"></div>
+      <div class="rti" onclick="pickRTI(this)">Customer loyalty</div>
+    </div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <h1 class="ct">Channels</h1>
+        <div class="ca">
+          <button class="btn btn-blue">${ICO.edit} Edit</button>
+          <button class="btn btn-out">${ICO.link} Share</button>
+          <button class="btn btn-out">${ICO.export} Export</button>
+          <button class="btn btn-out">${ICO.dots}</button>
+        </div>
+      </div>
+      <div class="ctabs"><span class="ctab active">Sessions</span><span class="ctab">Product and cart metrics</span><span class="ctab">Revenue metrics</span></div>
+      <div class="chart-ph" style="height:180px;padding:16px">
+        <svg viewBox="0 0 700 150" width="100%" height="100%">
+          <polyline points="0,120 50,100 100,90 150,70 200,80 250,60 300,75 350,55 400,65 450,50 500,60 550,45 600,55 650,48 700,50" fill="none" stroke="var(--blue)" stroke-width="2"/>
+          <polyline points="0,130 50,115 100,108 150,95 200,100 250,85 300,92 350,78 400,88 450,75 500,80 550,68 600,75 650,70 700,72" fill="none" stroke="#F97316" stroke-width="1.5" stroke-dasharray="4"/>
+          <polyline points="0,140 50,132 100,128 150,115 200,118 250,108 300,112 350,100 400,105 450,95 500,100 550,92 600,96 650,90 700,92" fill="none" stroke="#8B5CF6" stroke-width="1.5" stroke-dasharray="4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+integrations:()=>`
+<div class="int-grid">
+  ${[
+    ['SOURCE','Android','🤖','#e8f5e9','Our SDK for Android lets you collect data from Android apps and report it in Piwik PRO.','Read more'],
+    ['SOURCE','Angular','🅰️','#fce4ec','Our dedicated Piwik PRO library that helps with implementing Piwik PRO Tag Manager.','Read more'],
+    ['DESTINATION','AWS S3','☁️','#fff3e0','We can upload your raw Piwik PRO data to a bucket on AWS S3 at any time.','Contact us'],
+    ['DESTINATION','Azure Blob','📦','#e3f2fd','We can upload your raw Piwik PRO data to a container on Azure Blob.','Contact us'],
+    ['DESTINATION','BigQuery','🔍','#e8f5e9','We can upload your raw Piwik PRO data to a database on Google BigQuery.','Contact us'],
+    ['SOURCE','Confluence','⚡','#ede7f6','We\'ve got a dedicated plugin for Confluence that lets you collect user data and report it in Piwik PRO.','Read more'],
+    ['SOURCE','Flutter','💙','#e3f2fd','Our SDK for Flutter lets you collect data and report it in Piwik PRO.','Read more'],
+    ['ENRICHMENT','Google Ads','📈','#fff3e0','We can enrich your analytics data with Google Ads data for attribution insights.','Read more'],
+    ['SOURCE','Google AMP','⚡','#e8f5e9','Track user behavior on AMP pages with our Google AMP integration.','Read more'],
+  ].map(([type,name,ico,bg,desc,btn])=>`
+    <div class="int-card">
+      <div class="int-type">${type}</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="int-ico" style="background:${bg}">${ico}</div>
+        <div class="int-name">${name}</div>
+      </div>
+      <div class="int-desc">${desc}</div>
+      <div class="int-btn">${btn}</div>
+    </div>
+  `).join('')}
+</div>`,
+
+settings:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-body">
+      <div class="sec-hd">App settings</div>
+      ${[['Segments',true],['Dimensions value grouping',false],['Custom channels',false],['Calculated metrics',false],['Custom attribution models',false]].map(([n,a])=>`<div class="rti${a?' active':''}" onclick="pickRTI(this)">${n}</div>`).join('')}
+      <div class="sec-hd">Personal tools</div>
+      ${[['Scheduled reports',false],['Alerts',false],['Tracker debugger',false]].map(([n,a])=>`<div class="rti${a?' active':''}" onclick="pickRTI(this)">${n}</div>`).join('')}
+      <div class="sec-hd">Integrations</div>
+      ${['Google Search Console','Google Ads'].map(n=>`<div class="rti" onclick="pickRTI(this)">${n}</div>`).join('')}
+    </div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <h1 class="ct">Segments</h1>
+        <div class="ca"><button class="btn btn-blue">Add a segment</button></div>
+      </div>
+      <div style="margin:20px 0" class="tbl-toolbar">
+        <input class="srch tbl-search" placeholder="Search">
+        <button class="btn btn-out" style="font-size:12px">Any author ▾</button>
+      </div>
+      <table class="tbl">
+        <thead><tr><th><input type="checkbox"></th><th>Segment name ↑↓</th><th>Visibility ↑↓</th><th>Author ↑↓</th><th>Date updated ↓</th><th></th></tr></thead>
+        <tbody>
+          ${[['Mobile','All users','john@mail.com','Jan 27, 2026 11:10 AM'],['Desktop','All users','john@mail.com','Jan 27, 2026 11:10 AM'],['Sessions with conversions','All users','john@mail.com','Jan 27, 2026 11:10 AM']].map(([n,v,a,d])=>`<tr><td><input type="checkbox"></td><td><strong>${n}</strong></td><td>${v}</td><td>${a}</td><td>${d}</td><td>···</td></tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:12px;color:var(--text-muted)">
+        <span>Items per page: <select style="border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-size:12px"><option>10</option><option>25</option></select></span>
+        <span>3 items</span>
+        <div class="pg"><span class="pg-btn">‹</span><span>1</span><span class="pg-btn">›</span></div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+},// end analytics
+
+// ══════════════════════════════════════
+// DATA ACTIVATION
+// ══════════════════════════════════════
+'data-activation':{
+
+people:()=>`
+<div style="padding:24px;max-width:900px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <h1 class="ct">People</h1>
+      <span class="live-badge"><span class="live-dot"></span>Live</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-size:13px;color:var(--blue);cursor:pointer">To target smarter, not broad</span>
+      <button class="btn btn-green" style="flex:none">+ Create an audience</button>
+    </div>
+  </div>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px">Real-time activity and progress toward key goals</p>
+  <div style="display:flex;gap:40px;margin-bottom:24px">
+    <div><div class="pstat">${ICO.user} Online now</div><div class="pnum">19</div></div>
+    <div><div class="pstat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 11 12 14 22 4"/></svg> Goal completions (last 30 days)</div><div class="pnum">429</div></div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;gap:8px">
+      <button class="spill active">All <span style="background:#ddd;border-radius:10px;padding:1px 6px;font-size:11px">0</span></button>
+      <button class="spill">Completed a goal <span style="background:#ddd;border-radius:10px;padding:1px 6px;font-size:11px">0</span></button>
+      <span style="border-left:1px solid var(--border);margin:0 4px"></span>
+      <button class="spill active">All</button>
+      <button class="spill">Users</button>
+      <button class="spill">Visitors</button>
+    </div>
+    <button class="btn btn-green" style="flex:none">Find a profile <span style="background:rgba(255,255,255,.25);border-radius:4px;padding:1px 6px;font-size:10px">NEW</span></button>
+  </div>
+  <div class="widget">
+    <div class="wh"><strong>Recent activity</strong></div>
+    <div class="wb"><p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">See real-time engagement and completed goals (last 100 entries)</p><div style="text-align:center;padding:40px;color:#aaa">No data available</div></div>
+  </div>
+</div>`,
+
+audiences:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      ${['Lapsed big spendors','Cart abandoners','Campaign visitors','Promising customers','Big spenders','Active users'].map((n,i)=>`<div class="li${i===0?' active':''}" onclick="pickLI(this)">${n}</div>`).join('')}
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add an audience</button></div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px">
+      <div class="ch">
+        <div>
+          <h1 class="ct">Activate your debit card</h1>
+          <div style="font-size:12px;color:var(--text-muted)">Goal ID: 55677390-fh57789-48885</div>
+        </div>
+        <div class="ca">
+          <button class="btn btn-out" title="Test"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="btn btn-out">${ICO.sync}</button>
+          <button class="btn btn-out">${ICO.edit}</button>
+          <button class="btn btn-out">⧉</button>
+          <button class="btn btn-out">🗑</button>
+          <button class="btn btn-blue">⬇ Download CSV</button>
+        </div>
+      </div>
+      <p style="margin:8px 0 16px;font-size:13px;color:var(--text-muted)">Customers who spend a lot but have been inactive for the past 30 days.</p>
+      <div class="cmeta">
+        <span>${ICO.user} jdoe@mail.com</span>
+        <span>${ICO.cal} Wednesday, October 12, 2022 at 09:20 AM</span>
+        <span>${ICO.sync} Wednesday, October 12, 2022 at 09:20 AM</span>
+      </div>
+      <div class="ctabs"><span class="ctab active">Conditions</span><span class="ctab">Activations</span><span class="ctab">People (126)</span><span class="ctab">Triggers</span></div>
+      <div class="cond">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">All users who…</div>
+        <div>have the attribute</div>
+        <div style="margin:6px 0"><a>Total revenue</a> is greater than <b>500</b> currency</div>
+      </div>
+      <div class="cond-and">AND</div>
+      <div class="cond">
+        <div>didn't perform the event in the last 30 days</div>
+        <div style="margin:6px 0"><a>Event type</a> is <b>Page View</b></div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+activations:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      ${['Send a message on Slack','Send contact to an audience in Mailchimp','Send customer profile to Google Ads','Send active users to Microsoft Dynamics','Save to spreadsheet (zapier)','Send user to tray.io'].map(n=>`<div class="li" onclick="pickLI(this)"><span class="tag-dot"></span>${n}</div>`).join('')}
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add an activation</button></div>
+  </div>
+  <div class="rc" style="display:flex;align-items:center;justify-content:center">
+    <div style="text-align:center;max-width:360px;padding:40px 20px">
+      <div style="font-size:48px;margin-bottom:16px">📦</div>
+      <h3 style="font-size:18px;font-weight:600;margin-bottom:8px">No activations yet</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Each activation lets you connect to any tool with a webhook and keep data flow. Connect and unlock the power of your data.</p>
+      <button class="btn btn-blue">Create an activation</button>
+    </div>
+  </div>
+</div>`,
+
+},// end data-activation
+
+// ══════════════════════════════════════
+// TAG MANAGER
+// ══════════════════════════════════════
+'tag-manager':{
+
+tags:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="selrow"><label><input type="checkbox" style="margin-right:6px">0 selected</label><span><a>Copy</a><a>Delete</a><a>Move</a></span></div>
+      <div class="li" onclick="pickLI(this)"><span class="tag-dot"></span>Piwik PRO</div>
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a tag</button></div>
+  </div>
+  <div class="rc" style="display:flex;align-items:center;justify-content:center">
+    <div class="es"><div class="es-title">No tag selected</div><div class="es-sub">ℹ Read more: <a href="#" style="color:var(--blue)">Create a tag</a></div></div>
+  </div>
+</div>`,
+
+triggers:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="selrow"><label><input type="checkbox" style="margin-right:6px">0 selected</label><span><a>Copy</a><a>Delete</a><a>Move</a></span></div>
+      <div class="li" onclick="pickLI(this)"><span style="width:8px;height:8px;background:#3B82F6;border-radius:50%;display:inline-block;margin-right:6px"></span>Page view</div>
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a trigger</button></div>
+  </div>
+  <div class="rc" style="display:flex;align-items:center;justify-content:center">
+    <div class="es"><div class="es-title">No trigger selected</div><div class="es-sub">ℹ Read more: <a href="#" style="color:var(--blue)">Create a trigger</a></div></div>
+  </div>
+</div>`,
+
+variables:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="selrow"><label><input type="checkbox" style="margin-right:6px">0 selected</label><span><a>Copy</a><a>Delete</a><a>Move</a></span></div>
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a variable</button></div>
+  </div>
+  <div class="rc" style="display:flex;align-items:center;justify-content:center">
+    <div class="es"><div class="es-title">No variable selected</div><div class="es-sub">ℹ Read more: <a href="#" style="color:var(--blue)">Create a variable</a></div></div>
+  </div>
+</div>`,
+
+'debug-mode':()=>`
+<div>
+  <div class="dbg-banner">
+    <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">Debug mode</h2>
+    <p style="font-size:13px;color:#555;max-width:500px">Debug mode lets you preview your site or app with unpublished changes to help you test how tags, triggers and variables function.</p>
+  </div>
+  <div class="dbg-form">
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:8px">Connect your site to view it in debug mode</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Enter or select your site URL to start debugging your site. The site will open in a new window.</p>
+    <label>Your site address <span class="req">*</span></label>
+    <div style="display:flex;align-items:center;border:1px solid var(--border);border-radius:4px;padding:6px 10px;gap:8px;margin-bottom:16px;background:white">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <input style="border:none;outline:none;flex:1;font-size:13px;background:transparent" placeholder="https://example.com/" value="">
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <button class="btn btn-blue">Connect</button>
+      <a href="#" style="color:var(--blue);font-size:13px;display:flex;align-items:center;gap:4px">${ICO.link} Share debug mode access</a>
+    </div>
+  </div>
+  <div style="text-align:center;font-size:13px;color:var(--text-muted)">ℹ Read more: <a href="#" style="color:var(--blue)">About debug mode</a></div>
+</div>`,
+
+changelog:()=>`
+<div style="padding:24px;max-width:700px">
+  <h1 class="ct" style="margin-bottom:20px">Changelog</h1>
+  ${[
+    ['18.62.0','March 10, 2026','Added support for server-side tagging and improved performance for high-traffic sites.'],
+    ['18.61.1','February 28, 2026','Fixed an issue where tags with custom triggers were not firing correctly in some cases.'],
+    ['18.61.0','February 14, 2026','New variable types added: URL parameter, cookie, and data layer variables.'],
+    ['18.60.0','January 30, 2026','Improved tag debugging experience with enhanced error messages and stack traces.'],
+    ['18.59.2','January 15, 2026','Fixed edge cases in trigger evaluation logic for scroll depth triggers.'],
+  ].map(([v,d,t])=>`<div class="cl-item"><div class="cl-ver">Version ${v}</div><div class="cl-date">${d}</div><div class="cl-desc">${t}</div></div>`).join('')}
+</div>`,
+
+overview:()=>`
+<div style="padding:24px;max-width:800px">
+  <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">Overview</h2>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Use the Overview to spot potential issues in unpublished changes, like broken tag-trigger relationships that might stop tracking or skew reports.</p>
+  <div class="ov-grid">
+    <div class="ov-card"><div class="ov-label">${ICO.drag} Tags</div><div class="ov-val"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>1</div></div>
+    <div class="ov-card"><div class="ov-label">${ICO.drag} Triggers</div><div class="ov-val"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>1</div></div>
+    <div class="ov-card"><div class="ov-label">(x) Variables</div><div class="ov-val">0</div></div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <h3 style="font-size:15px;font-weight:600">Setup checks</h3>
+    <span style="font-size:12px;color:var(--text-muted)">Total issues: 0</span>
+  </div>
+  <div class="sc-wrap">
+    ${[
+      ['Tags with unrecognized variables'],
+      ['Tags without triggers'],
+      ['Triggers without tags'],
+      ['Variables used by unrecognized variables'],
+      ['Unused variables'],
+    ].map(([n])=>`<div class="sc"><div class="sc-name"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/></svg>${n}</div><span class="sc-ok">All good</span></div>`).join('')}
+  </div>
+  <div style="text-align:center;font-size:13px;color:var(--text-muted)">ℹ Read more: <a href="#" style="color:var(--blue)">About the overview</a></div>
+</div>`,
+
+},// end tag-manager
+
+// ══════════════════════════════════════
+// ADMINISTRATION
+// ══════════════════════════════════════
+administration:{
+
+'sites-apps':()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Date updated</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="li" onclick="pickLI(this)" style="justify-content:space-between"><span>Demo site</span><span style="font-size:11px;color:#aaa">01/27/2026</span></div>
+      <div class="li" onclick="pickLI(this)" style="justify-content:space-between"><span>Trial site</span><span style="font-size:11px;color:#aaa">01/27/2026</span></div>
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a site or app</button></div>
+  </div>
+  <div class="rc" style="display:flex;align-items:center;justify-content:center">
+    <div class="es"><div class="es-title">No site selected</div><div class="es-sub">Select a site from the list to view its settings</div></div>
+  </div>
+</div>`,
+
+users:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="frow"><div class="frow-l"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="14" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>Email</div>${ICO.filter}</div>
+    <div class="lp-body">
+      <div class="li" onclick="pickLI(this)">johndoe@testtrial.com</div>
+    </div>
+    <div class="lp-foot"><button class="btn btn-green">+ Invite a user</button></div>
+  </div>
+  <div class="rc" style="display:flex;align-items:center;justify-content:center">
+    <div class="es"><div class="es-title">No user selected</div></div>
+  </div>
+</div>`,
+
+groups:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-hd"><input class="srch" placeholder="Search"></div>
+    <div class="lp-body"><div style="text-align:center;padding:40px 16px;color:#aaa;font-size:13px">No groups yet</div></div>
+    <div class="lp-foot"><button class="btn btn-green">+ Add a group</button></div>
+  </div>
+  <div class="rc" style="display:flex;align-items:center;justify-content:center">
+    <div class="es"><div class="es-title">No group selected</div></div>
+  </div>
+</div>`,
+
+account:()=>`
+<div class="split">
+  <div class="lp">
+    <div class="lp-body">
+      ${[['Account settings',true],['Global site & app settings',false],['Domains',false],['Subscription',false],['Billing & payment',false],['Opt-out form',false],['Audit log',false]].map(([n,a])=>`<div class="rti${a?' active':''}" onclick="pickRTI(this)">${n}</div>`).join('')}
+    </div>
+  </div>
+  <div class="rc">
+    <div style="padding:24px;max-width:700px">
+      <h1 class="ct" style="margin-bottom:24px">Account settings</h1>
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:16px">Security</h3>
+      <div class="ac-card" style="background:linear-gradient(135deg,#EBF4FF,#F3E8FF);border-color:#c7d9f8">
+        <div style="text-align:center;padding:8px 0 16px">
+          <div style="font-size:32px;margin-bottom:8px">🛡️</div>
+          <h4 style="font-size:15px;font-weight:600;margin-bottom:6px">Make logins safe and easy with SSO</h4>
+          <p style="font-size:13px;color:#555;margin-bottom:16px">Use SAML single sign-on to let users sign in with their SSO account. Available in our paid plan.</p>
+          <div style="display:flex;justify-content:center;gap:12px">
+            <button class="btn btn-out">Contact us</button>
+            <a href="#" style="color:var(--blue);font-size:13px;padding:7px 0">Read more</a>
+          </div>
+        </div>
+      </div>
+      <div class="ac-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between">
+          <div style="flex:1">
+            <div class="ac-title">2FA for all users</div>
+            <div class="ac-sub">Add an extra layer of security to user accounts with two-factor authentication. Once set up, users will need to use codes from a mobile app to log in.</div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-muted)">ℹ Read more: <a href="#" style="color:var(--blue)">Set up two-factor authentication (2FA)</a></div>
+          </div>
+          <button class="dm-toggle" style="display:block;margin-left:16px;flex-shrink:0" onclick="this.classList.toggle('on')"></button>
+        </div>
+      </div>
+      <h3 style="font-size:16px;font-weight:600;margin:24px 0 16px">Session inactivity timeout</h3>
+      <div class="ac-card">
+        <div class="ac-title">Session inactivity timeout</div>
+        <div class="ac-sub" style="margin-bottom:12px">Decide how long users stay logged in if they're not using the product.</div>
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px">Session inactivity timeout <span style="color:red">*</span></label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" value="30" min="15" max="480" style="width:80px;padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+          <span style="font-size:12px;color:var(--text-muted)">min</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Min value: 15. Max value: 480.</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-muted)">ℹ Read more: <a href="#" style="color:var(--blue)">Change the session timeout for users</a></div>
+      </div>
+    </div>
+  </div>
+</div>`,
+
+}// end administration
+};// end CONTENT
+
+// ─── INIT ────────────────────────────────────────────────
+(function init(){
+  renderNav('analytics');
+  renderContent('analytics','dashboards');
+  document.getElementById('nav-analytics').classList.add('active');
+})();
+</script>
+</body>
+</html>
